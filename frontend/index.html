@@ -4,16 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Space Earth Dashboard</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="/static/style.css">
   </head>
   <body>
     <header class="topbar">
       <div>
         <h1>Space Earth Dashboard</h1>
-        <p id="status">Ladowanie danych...</p>
+        <p class="eyebrow">SPACE DATA OBSERVATORY</p>
+        <p id="status">Ładowanie danych...</p>
       </div>
       <nav class="actions" aria-label="Akcje">
-        <button id="refresh-btn" type="button">Odswiez</button>
+        <button id="refresh-btn" type="button">Odśwież</button>
         <button id="save-apod-btn" type="button">Zapisz APOD</button>
         <button id="save-iss-btn" type="button">Zapisz ISS</button>
         <button id="save-neo-btn" type="button">Zapisz asteroidy</button>
@@ -27,8 +30,8 @@
           <img id="apod-image" alt="Astronomy Picture of the Day">
           <iframe id="apod-video" title="Astronomy Picture of the Day video" hidden></iframe>
           <div id="apod-fallback" class="media-fallback" hidden>
-            <p>Material video nie moze zostac osadzony w dashboardzie.</p>
-            <a id="apod-media-link" href="#" target="_blank" rel="noreferrer">Otworz material</a>
+            <p>Materiał video nie może zostać osadzony w dashboardzie.</p>
+            <a id="apod-media-link" href="#" target="_blank" rel="noreferrer">Otwórz materiał</a>
           </div>
         </div>
         <h3 id="apod-title">-</h3>
@@ -36,15 +39,16 @@
         <p id="apod-description">-</p>
       </section>
 
-      <section class="panel">
+      <section class="panel iss-panel">
         <h2>Pozycja ISS</h2>
+        <div id="iss-map" class="map" role="img" aria-label="Mapa pozycji i historii ISS"></div>
         <dl class="metrics">
           <div>
-            <dt>Szerokosc</dt>
+            <dt>Szerokość</dt>
             <dd id="iss-latitude">-</dd>
           </div>
           <div>
-            <dt>Dlugosc</dt>
+            <dt>Długość</dt>
             <dd id="iss-longitude">-</dd>
           </div>
           <div>
@@ -52,6 +56,37 @@
             <dd id="iss-timestamp">-</dd>
           </div>
         </dl>
+      </section>
+
+      <section class="panel analytics-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">OSTATNIE 30 DNI</p>
+            <h2>Analityka NEO</h2>
+          </div>
+          <p id="neo-analytics-range">-</p>
+        </div>
+        <div class="kpi-grid">
+          <article class="kpi">
+            <span>Obiekty</span>
+            <strong id="neo-total">-</strong>
+          </article>
+          <article class="kpi danger">
+            <span>Potencjalnie niebezpieczne</span>
+            <strong id="neo-hazardous">-</strong>
+          </article>
+          <article class="kpi">
+            <span>Najbliższe minięcie</span>
+            <strong id="neo-closest">-</strong>
+          </article>
+          <article class="kpi">
+            <span>Średnia prędkość</span>
+            <strong id="neo-velocity">-</strong>
+          </article>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="neo-chart" aria-label="Dzienna liczba obiektów NEO"></canvas>
+        </div>
       </section>
 
       <section class="panel">
@@ -89,7 +124,7 @@
           <table>
             <thead>
               <tr>
-                <th>Zrodlo</th>
+                <th>Źródło</th>
                 <th>Nazwa / ID</th>
                 <th>Data</th>
               </tr>
@@ -100,17 +135,17 @@
       </section>
 
       <section class="panel details-panel">
-        <h2>Szczegoly rekordu</h2>
+        <h2>Szczegóły rekordu</h2>
         <p id="details-empty">Wybierz rekord z tabeli.</p>
         <article id="details-content" hidden>
           <h3 id="details-title">-</h3>
           <dl class="details-list">
             <div>
-              <dt>Zrodlo</dt>
+              <dt>Źródło</dt>
               <dd id="details-source">-</dd>
             </div>
             <div>
-              <dt>ID zewnetrzne</dt>
+              <dt>ID zewnętrzne</dt>
               <dd id="details-external-id">-</dd>
             </div>
             <div>
@@ -118,16 +153,18 @@
               <dd id="details-observed-at">-</dd>
             </div>
             <div>
-              <dt>Szczegoly</dt>
+              <dt>Szczegóły</dt>
               <dd id="details-summary">-</dd>
             </div>
           </dl>
-          <a id="details-link" href="#" target="_blank" rel="noreferrer" hidden>Otworz link</a>
+          <a id="details-link" href="#" target="_blank" rel="noreferrer" hidden>Otwórz link</a>
           <pre id="details-raw"></pre>
         </article>
       </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="/static/app.js"></script>
   </body>
 </html>

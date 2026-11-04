@@ -28,6 +28,17 @@ const detailsObservedAt = document.querySelector("#details-observed-at");
 const detailsSummary = document.querySelector("#details-summary");
 const detailsLink = document.querySelector("#details-link");
 const detailsRaw = document.querySelector("#details-raw");
+const neoAnalyticsRange = document.querySelector("#neo-analytics-range");
+const neoTotal = document.querySelector("#neo-total");
+const neoHazardous = document.querySelector("#neo-hazardous");
+const neoClosest = document.querySelector("#neo-closest");
+const neoVelocity = document.querySelector("#neo-velocity");
+const neoChartCanvas = document.querySelector("#neo-chart");
+
+let issMap;
+let issMarker;
+let issTrack;
+let neoChart;
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
@@ -86,6 +97,64 @@ function renderIss(payload) {
   issLatitude.textContent = position.latitude || "-";
   issLongitude.textContent = position.longitude || "-";
   issTimestamp.textContent = payload.timestamp || "-";
+
+  const latitude = Number(position.latitude);
+  const longitude = Number(position.longitude);
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    renderIssMap(latitude, longitude);
+  }
+}
+
+function getIssMap() {
+  if (typeof L === "undefined") {
+    return null;
+  }
+  if (!issMap) {
+    issMap = L.map("iss-map", { worldCopyJump: true }).setView([0, 0], 2);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 8,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(issMap);
+  }
+  return issMap;
+}
+
+function renderIssMap(latitude, longitude) {
+  const map = getIssMap();
+  if (!map) {
+    return;
+  }
+  if (!issMarker) {
+    issMarker = L.circleMarker([latitude, longitude], {
+      radius: 8,
+      color: "#ffffff",
+      weight: 3,
+      fillColor: "#5be7c4",
+      fillOpacity: 1,
+    }).addTo(map);
+    issMarker.bindTooltip("Aktualna pozycja ISS");
+  } else {
+    issMarker.setLatLng([latitude, longitude]);
+  }
+  map.setView([latitude, longitude], 3);
+}
+
+function renderIssHistory(observations) {
+  const points = observations
+    .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+    .sort((left, right) => new Date(left.observed_at) - new Date(right.observed_at))
+    .map((item) => [item.latitude, item.longitude]);
+  if (points.length === 0) {
+    return;
+  }
+  const map = getIssMap();
+  if (!map) {
+    return;
+  }
+  if (issTrack) {
+    issTrack.remove();
+  }
+  issTrack = L.polyline(points, { color: "#8aa7ff", weight: 3, opacity: 0.8 }).addTo(map);
 }
 
 function renderNeo(payload) {
@@ -108,6 +177,63 @@ function renderDailySummary(summary) {
   summaryNeo.textContent = summary.neo_count;
 }
 
+function formatMetric(value, digits = 1) {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  return new Intl.NumberFormat("pl-PL", { maximumFractionDigits: digits }).format(value);
+}
+
+function renderNeoAnalytics(analytics) {
+  neoAnalyticsRange.textContent = `${analytics.start_date} – ${analytics.end_date}`;
+  neoTotal.textContent = formatMetric(analytics.total_objects, 0);
+  neoHazardous.textContent = formatMetric(analytics.hazardous_objects, 0);
+  neoClosest.textContent = analytics.closest_miss_distance_km === null
+    ? "-"
+    : `${formatMetric(analytics.closest_miss_distance_km, 0)} km`;
+  neoVelocity.textContent = analytics.average_velocity_kps === null
+    ? "-"
+    : `${formatMetric(analytics.average_velocity_kps, 2)} km/s`;
+
+  if (typeof Chart === "undefined") {
+    return;
+  }
+  if (neoChart) {
+    neoChart.destroy();
+  }
+  neoChart = new Chart(neoChartCanvas, {
+    type: "bar",
+    data: {
+      labels: analytics.daily.map((item) => item.date),
+      datasets: [
+        {
+          label: "Wszystkie obiekty",
+          data: analytics.daily.map((item) => item.total),
+          backgroundColor: "rgba(91, 231, 196, 0.65)",
+          borderColor: "#5be7c4",
+          borderWidth: 1,
+        },
+        {
+          label: "Potencjalnie niebezpieczne",
+          data: analytics.daily.map((item) => item.hazardous),
+          backgroundColor: "rgba(255, 120, 120, 0.75)",
+          borderColor: "#ff7878",
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: false, ticks: { color: "#aebbd1", maxTicksLimit: 10 } },
+        y: { beginAtZero: true, ticks: { color: "#aebbd1", precision: 0 } },
+      },
+      plugins: { legend: { labels: { color: "#dce6f7" } } },
+    },
+  });
+}
+
 function formatDateTime(value) {
   if (!value) {
     return "-";
@@ -127,7 +253,10 @@ function observationSummary(item) {
     return `media: ${item.media_type || "-"}`;
   }
   if (item.source === "nasa_neows") {
-    return item.description || "Obiekt NEO";
+    const distance = item.miss_distance_km
+      ? `${formatMetric(item.miss_distance_km, 0)} km`
+      : "brak danych";
+    return `minięcie: ${distance}, zagrożenie: ${item.is_hazardous ? "tak" : "nie"}`;
   }
   return item.description || "-";
 }
@@ -208,12 +337,16 @@ async function loadDashboard() {
   setStatus("Dane odswiezone.");
 
   try {
-    const [observations, summary] = await Promise.all([
+    const [observations, summary, issHistory, neoAnalytics] = await Promise.all([
       fetchJson(`${api}/space/observations`),
       fetchJson(`${api}/space/daily-summary?target_date=${date}`),
+      fetchJson(`${api}/space/observations?source=open_notify_iss&limit=100`),
+      fetchJson(`${api}/space/analytics/neo`),
     ]);
     renderObservations(observations);
     renderDailySummary(summary);
+    renderIssHistory(issHistory);
+    renderNeoAnalytics(neoAnalytics);
   } catch (error) {
     dbStatusEl.textContent = `Brak polaczenia z baza: ${error.message}`;
     observationsTable.replaceChildren();
