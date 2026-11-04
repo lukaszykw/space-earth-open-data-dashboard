@@ -33,10 +33,11 @@ Swagger: <http://localhost:8000/docs>
 
 ## Zapis danych do PostgreSQL
 
-Po uruchomieniu Dockera zainicjalizuj tabele:
+Migracje bazy danych są stosowane automatycznie przy starcie Docker Compose. Lokalnie można je
+uruchomić poleceniem:
 
 ```powershell
-Invoke-RestMethod -Method Post http://localhost:8000/api/v1/space/database/init
+alembic upgrade head
 ```
 
 Nastepnie mozna zapisac dane pobrane z API:
@@ -79,16 +80,15 @@ docker compose -f docker-compose.dev.yml up --build
 http://localhost:8000/
 ```
 
-3. Kliknij `Init DB`, zeby utworzyc tabele w PostgreSQL.
-4. Kliknij `Zapisz APOD`, `Zapisz ISS` i `Zapisz asteroidy`.
-5. Sprawdz sekcje `Zapisane obserwacje` oraz `Podsumowanie dnia`.
-6. Otworz Swagger:
+3. Kliknij `Zapisz APOD`, `Zapisz ISS` i `Zapisz asteroidy`.
+4. Sprawdz sekcje `Zapisane obserwacje` oraz `Podsumowanie dnia`.
+5. Otworz Swagger:
 
 ```text
 http://localhost:8000/docs
 ```
 
-7. Uruchom testy:
+6. Uruchom testy:
 
 ```powershell
 python -m pytest
@@ -138,10 +138,10 @@ Uruchom najpierw aplikacje w trybie dev:
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-Przed pomiarem zainicjalizuj baze przyciskiem `Init DB` w dashboardzie albo komenda:
+Przed pomiarem upewnij się, że migracje bazy zostały zastosowane:
 
 ```powershell
-Invoke-RestMethod -Method Post http://localhost:8000/api/v1/space/database/init
+alembic upgrade head
 ```
 
 W drugim terminalu uruchom Locust w trybie headless:

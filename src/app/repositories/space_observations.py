@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime, time
 from typing import Any
 
 from sqlalchemy import Select, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import SpaceObservation
@@ -29,22 +30,54 @@ def _build_observation(data: dict[str, Any]) -> SpaceObservation:
 
 
 async def save_observation(session: AsyncSession, data: dict[str, Any]) -> SpaceObservation:
-    observation = _build_observation(data)
-    session.add(observation)
+    external_id = data.get("external_id")
+    if external_id is None:
+        observation = _build_observation(data)
+        session.add(observation)
+        await session.commit()
+        await session.refresh(observation)
+        return observation
+
+    values = {
+        "source": data["source"],
+        "external_id": external_id,
+        "title": data.get("title"),
+        "description": data.get("description"),
+        "media_type": data.get("media_type"),
+        "media_url": data.get("media_url"),
+        "latitude": data.get("latitude"),
+        "longitude": data.get("longitude"),
+        "observed_at": _parse_observed_at(data.get("observed_at")),
+        "raw": data["raw"],
+    }
+    statement = (
+        insert(SpaceObservation)
+        .values(**values)
+        .on_conflict_do_update(
+            constraint="uq_observation_source_external",
+            set_={
+                key: value
+                for key, value in values.items()
+                if key not in {"source", "external_id"}
+            },
+        )
+        .returning(SpaceObservation.id)
+    )
+    observation_id = (await session.execute(statement)).scalar_one()
     await session.commit()
-    await session.refresh(observation)
-    return observation
+    return await session.get_one(SpaceObservation, observation_id, populate_existing=True)
 
 
 async def save_observations(
     session: AsyncSession,
     observations_data: list[dict[str, Any]],
 ) -> list[SpaceObservation]:
-    observations = [_build_observation(data) for data in observations_data]
-    session.add_all(observations)
-    await session.commit()
-    for observation in observations:
-        await session.refresh(observation)
+    if not observations_data:
+        return []
+
+    observations: list[SpaceObservation] = []
+    for data in observations_data:
+        observations.append(await save_observation(session, data))
     return observations
 
 

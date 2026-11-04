@@ -1,11 +1,11 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import DailySummaryRead, SpaceObservationRead
 from app.core.config import Settings, get_settings
-from app.db.session import create_tables, get_session
+from app.db.session import get_session
 from app.ingestion.nasa_client import NasaClient
 from app.ingestion.normalizers import (
     normalize_apod,
@@ -22,6 +22,15 @@ from app.repositories.space_observations import (
 )
 
 router = APIRouter()
+
+
+def _validate_neo_date_range(start_date: date, end_date: date | None) -> date:
+    effective_end = end_date or start_date
+    if effective_end < start_date:
+        raise HTTPException(status_code=422, detail="end_date must not be earlier than start_date")
+    if (effective_end - start_date).days > 7:
+        raise HTTPException(status_code=422, detail="NASA NeoWs accepts ranges of at most 8 days")
+    return effective_end
 
 
 @router.get("/apod")
@@ -45,14 +54,9 @@ async def get_near_earth_objects(
     end_date: date | None = None,
     settings: Settings = Depends(get_settings),
 ) -> dict:
+    effective_end = _validate_neo_date_range(start_date, end_date)
     async with NasaClient(settings.nasa_api_key) as client:
-        return await client.get_neo_feed(start_date, end_date or start_date)
-
-
-@router.post("/database/init")
-async def init_database() -> dict[str, str]:
-    await create_tables()
-    return {"status": "database initialized"}
+        return await client.get_neo_feed(start_date, effective_end)
 
 
 @router.post("/ingest/apod", response_model=SpaceObservationRead)
@@ -91,6 +95,7 @@ async def ingest_near_earth_objects(
     settings: Settings = Depends(get_settings),
     session: AsyncSession = Depends(get_session),
 ) -> list[SpaceObservationRead]:
+    effective_end = _validate_neo_date_range(start_date, end_date)
     if end_date is None or end_date == start_date:
         cached_observations = await list_observations_for_day(session, "nasa_neows", start_date)
         if cached_observations:
@@ -100,7 +105,7 @@ async def ingest_near_earth_objects(
             ]
 
     async with NasaClient(settings.nasa_api_key) as client:
-        payload = await client.get_neo_feed(start_date, end_date or start_date)
+        payload = await client.get_neo_feed(start_date, effective_end)
 
     observations = await save_observations(session, normalize_neo_feed(payload))
     return [SpaceObservationRead.model_validate(observation) for observation in observations]
@@ -109,7 +114,7 @@ async def ingest_near_earth_objects(
 @router.get("/observations", response_model=list[SpaceObservationRead])
 async def get_observations(
     source: str | None = None,
-    limit: int = 50,
+    limit: int = Query(default=50, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ) -> list[SpaceObservationRead]:
     observations = await list_observations(session, source=source, limit=limit)
