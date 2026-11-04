@@ -2,6 +2,7 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
@@ -29,9 +30,13 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
-    with context.begin_transaction():
-        context.run_migrations()
+    connection.execute(text("SELECT pg_advisory_lock(731945221)"))
+    try:
+        context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+        with context.begin_transaction():
+            context.run_migrations()
+    finally:
+        connection.execute(text("SELECT pg_advisory_unlock(731945221)"))
 
 
 async def run_async_migrations() -> None:

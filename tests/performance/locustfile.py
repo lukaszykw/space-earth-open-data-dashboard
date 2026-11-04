@@ -21,5 +21,5 @@ class ApiUser(HttpUser):
         self.client.get("/api/v1/space/daily-summary")
 
     @task
-    def iss_position(self) -> None:
-        self.client.get("/api/v1/space/iss-position")
+    def neo_analytics(self) -> None:
+        self.client.get("/api/v1/space/analytics/neo")

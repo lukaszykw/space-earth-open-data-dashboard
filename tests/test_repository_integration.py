@@ -1,11 +1,13 @@
 import os
 from datetime import UTC, date, datetime
 
+import httpx
 import pytest
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.db.models import IngestionRun, SpaceObservation
+from app.main import app
 from app.repositories.ingestion_runs import (
     finish_ingestion_run,
     list_ingestion_runs,
@@ -18,6 +20,17 @@ pytestmark = pytest.mark.skipif(
     "TEST_DATABASE_URL" not in os.environ,
     reason="TEST_DATABASE_URL is required for PostgreSQL integration tests",
 )
+
+
+@pytest.mark.asyncio
+async def test_readiness_checks_database_connection() -> None:
+    transport = httpx.ASGITransport(app=app)
+
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/health/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
 
 
 @pytest.mark.asyncio

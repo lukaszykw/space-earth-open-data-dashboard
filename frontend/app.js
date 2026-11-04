@@ -355,28 +355,7 @@ async function loadDashboard() {
   }
 }
 
-async function postAction(url, successMessage) {
-  setStatus("Wykonywanie akcji...");
-  try {
-    await fetchJson(url, { method: "POST" });
-    setStatus(successMessage);
-    await loadDashboard();
-  } catch (error) {
-    setStatus(`Blad: ${error.message}`);
-  }
-}
-
 document.querySelector("#refresh-btn").addEventListener("click", loadDashboard);
-document.querySelector("#save-apod-btn").addEventListener("click", () => {
-  postAction(`${api}/space/ingest/apod`, "APOD zapisany.");
-});
-document.querySelector("#save-iss-btn").addEventListener("click", () => {
-  postAction(`${api}/space/ingest/iss-position`, "Pozycja ISS zapisana.");
-});
-document.querySelector("#save-neo-btn").addEventListener("click", () => {
-  const date = todayIsoDate();
-  postAction(`${api}/space/ingest/neo?start_date=${date}`, "Asteroidy zapisane.");
-});
 
 loadDashboard().catch((error) => {
   setStatus(`Blad ladowania danych: ${error.message}`);
