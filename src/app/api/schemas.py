@@ -15,6 +15,10 @@ class SpaceObservationRead(BaseModel):
     media_url: str | None = None
     latitude: float | None = None
     longitude: float | None = None
+    is_hazardous: bool | None = None
+    estimated_diameter_meters: float | None = None
+    relative_velocity_kps: float | None = None
+    miss_distance_km: float | None = None
     observed_at: datetime | None = None
     raw: dict[str, Any]
     created_at: datetime
@@ -41,3 +45,21 @@ class IngestionRunRead(BaseModel):
     error_message: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class NeoDailyMetric(BaseModel):
+    date: date_type
+    total: int
+    hazardous: int
+
+
+class NeoAnalyticsRead(BaseModel):
+    start_date: date_type
+    end_date: date_type
+    total_objects: int
+    hazardous_objects: int
+    average_velocity_kps: float | None
+    largest_diameter_meters: float | None
+    closest_miss_distance_km: float | None
+    daily: list[NeoDailyMetric]
+    closest_approaches: list[SpaceObservationRead]

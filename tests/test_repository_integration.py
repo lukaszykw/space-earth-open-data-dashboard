@@ -11,6 +11,7 @@ from app.repositories.ingestion_runs import (
     list_ingestion_runs,
     start_ingestion_run,
 )
+from app.repositories.neo_analytics import get_neo_analytics
 from app.repositories.space_observations import get_daily_summary, save_observation
 
 pytestmark = pytest.mark.skipif(
@@ -74,6 +75,49 @@ async def test_ingestion_run_lifecycle_is_persisted() -> None:
             assert completed.id in {item.id for item in runs}
 
             await session.execute(delete(IngestionRun).where(IngestionRun.id == completed.id))
+            await session.commit()
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_neo_analytics_aggregates_normalized_metrics() -> None:
+    engine = create_async_engine(os.environ["TEST_DATABASE_URL"])
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    external_id = "integration-neo-analytics"
+
+    try:
+        async with session_factory() as session:
+            await save_observation(
+                session,
+                {
+                    "source": "nasa_neows",
+                    "external_id": external_id,
+                    "title": "Analytics asteroid",
+                    "observed_at": datetime(2026, 11, 4, tzinfo=UTC),
+                    "is_hazardous": True,
+                    "estimated_diameter_meters": 250.0,
+                    "relative_velocity_kps": 18.5,
+                    "miss_distance_km": 500000.0,
+                    "raw": {"id": external_id},
+                },
+            )
+
+            analytics = await get_neo_analytics(
+                session,
+                date(2026, 11, 4),
+                date(2026, 11, 4),
+            )
+            assert analytics["total_objects"] >= 1
+            assert analytics["hazardous_objects"] >= 1
+            assert analytics["daily"][0]["date"] == date(2026, 11, 4)
+            assert external_id in {
+                item.external_id for item in analytics["closest_approaches"]
+            }
+
+            await session.execute(
+                delete(SpaceObservation).where(SpaceObservation.external_id == external_id)
+            )
             await session.commit()
     finally:
         await engine.dispose()

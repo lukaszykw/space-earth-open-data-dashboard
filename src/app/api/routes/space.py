@@ -1,15 +1,21 @@
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.schemas import DailySummaryRead, IngestionRunRead, SpaceObservationRead
+from app.api.schemas import (
+    DailySummaryRead,
+    IngestionRunRead,
+    NeoAnalyticsRead,
+    SpaceObservationRead,
+)
 from app.core.config import Settings, get_settings
 from app.db.session import get_session
 from app.ingestion.jobs import run_apod_ingestion, run_iss_ingestion, run_neo_ingestion
 from app.ingestion.nasa_client import NasaClient
 from app.ingestion.open_notify_client import OpenNotifyClient
 from app.repositories.ingestion_runs import list_ingestion_runs
+from app.repositories.neo_analytics import get_neo_analytics
 from app.repositories.space_observations import (
     get_daily_summary,
     list_observations,
@@ -86,6 +92,22 @@ async def get_ingestion_runs(
 ) -> list[IngestionRunRead]:
     runs = await list_ingestion_runs(session, limit=limit, status=status)
     return [IngestionRunRead.model_validate(run) for run in runs]
+
+
+@router.get("/analytics/neo", response_model=NeoAnalyticsRead)
+async def get_near_earth_object_analytics(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> NeoAnalyticsRead:
+    effective_end = end_date or date.today()
+    effective_start = start_date or effective_end - timedelta(days=29)
+    if effective_end < effective_start:
+        raise HTTPException(status_code=422, detail="end_date must not be earlier than start_date")
+    if (effective_end - effective_start).days > 365:
+        raise HTTPException(status_code=422, detail="Analytics range cannot exceed 366 days")
+    analytics = await get_neo_analytics(session, effective_start, effective_end)
+    return NeoAnalyticsRead.model_validate(analytics)
 
 
 @router.get("/observations", response_model=list[SpaceObservationRead])

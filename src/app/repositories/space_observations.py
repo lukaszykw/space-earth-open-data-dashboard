@@ -24,6 +24,10 @@ def _build_observation(data: dict[str, Any]) -> SpaceObservation:
         media_url=data.get("media_url"),
         latitude=data.get("latitude"),
         longitude=data.get("longitude"),
+        is_hazardous=data.get("is_hazardous"),
+        estimated_diameter_meters=data.get("estimated_diameter_meters"),
+        relative_velocity_kps=data.get("relative_velocity_kps"),
+        miss_distance_km=data.get("miss_distance_km"),
         observed_at=_parse_observed_at(data.get("observed_at")),
         raw=data["raw"],
     )
@@ -47,6 +51,10 @@ async def save_observation(session: AsyncSession, data: dict[str, Any]) -> Space
         "media_url": data.get("media_url"),
         "latitude": data.get("latitude"),
         "longitude": data.get("longitude"),
+        "is_hazardous": data.get("is_hazardous"),
+        "estimated_diameter_meters": data.get("estimated_diameter_meters"),
+        "relative_velocity_kps": data.get("relative_velocity_kps"),
+        "miss_distance_km": data.get("miss_distance_km"),
         "observed_at": _parse_observed_at(data.get("observed_at")),
         "raw": data["raw"],
     }
