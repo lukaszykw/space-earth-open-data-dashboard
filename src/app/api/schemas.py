@@ -29,3 +29,15 @@ class DailySummaryRead(BaseModel):
     iss_position_count: int
     neo_count: int
     latest_observation: SpaceObservationRead | None = None
+
+
+class IngestionRunRead(BaseModel):
+    id: int
+    job_name: str
+    status: str
+    started_at: datetime
+    finished_at: datetime | None = None
+    records_processed: int
+    error_message: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)

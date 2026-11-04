@@ -20,6 +20,7 @@ W trybie Docker Compose dev aplikacja uzywa `.env`.
 - Docker Compose
 - Pytest
 - Locust
+- APScheduler
 
 ## Uruchomienie developerskie
 
@@ -59,6 +60,15 @@ Zapisane obserwacje sa dostepne pod:
 ```text
 http://localhost:8000/api/v1/space/observations
 ```
+
+Historia automatycznych i ręcznych uruchomień ingestion jest dostępna pod:
+
+```text
+http://localhost:8000/api/v1/space/ingestion-runs
+```
+
+Osobny proces `worker` pobiera APOD oraz NEO raz dziennie i pozycję ISS co 5 minut.
+Interwał oraz strefę czasową można zmienić przez zmienne środowiskowe.
 
 Agregowane podsumowanie dnia:
 

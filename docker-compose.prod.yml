@@ -25,5 +25,15 @@ services:
       timeout: 3s
       retries: 20
 
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      APP_ENV: prod
+    command: sh -c "alembic upgrade head && python -m app.ingestion.worker"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pg_prod_data:
