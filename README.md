@@ -122,6 +122,14 @@ docker compose -f docker-compose.test.yml up --build --abort-on-container-exit -
 docker compose -f docker-compose.test.yml down
 ```
 
+## CI — GitHub Actions
+
+Workflow `.github/workflows/ci.yml` uruchamia sie po kazdym pushu i pull requescie.
+Dwa niezalezne zadania uruchamiaja Pytest na Pythonie 3.12 oraz buduja obraz
+aplikacji z `Dockerfile`. Obraz nie jest publikowany w rejestrze.
+Obecne testy nie wymagaja uruchomionej bazy PostgreSQL ani klucza NASA;
+odpowiedzi zewnetrznych API sa symulowane w testach klientow.
+
 ## Test wydajnosciowy
 
 Uruchom najpierw aplikacje w trybie dev:
