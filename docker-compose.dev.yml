@@ -31,5 +31,16 @@ services:
       timeout: 3s
       retries: 20
 
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql+asyncpg://space:space@db:5432/space_dashboard
+    command: sh -c "alembic upgrade head && python -m app.ingestion.worker"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pg_dev_data:

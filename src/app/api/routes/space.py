@@ -3,22 +3,16 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.schemas import DailySummaryRead, SpaceObservationRead
+from app.api.schemas import DailySummaryRead, IngestionRunRead, SpaceObservationRead
 from app.core.config import Settings, get_settings
 from app.db.session import get_session
+from app.ingestion.jobs import run_apod_ingestion, run_iss_ingestion, run_neo_ingestion
 from app.ingestion.nasa_client import NasaClient
-from app.ingestion.normalizers import (
-    normalize_apod,
-    normalize_iss_position,
-    normalize_neo_feed,
-)
 from app.ingestion.open_notify_client import OpenNotifyClient
+from app.repositories.ingestion_runs import list_ingestion_runs
 from app.repositories.space_observations import (
     get_daily_summary,
     list_observations,
-    list_observations_for_day,
-    save_observation,
-    save_observations,
 )
 
 router = APIRouter()
@@ -62,29 +56,15 @@ async def get_near_earth_objects(
 @router.post("/ingest/apod", response_model=SpaceObservationRead)
 async def ingest_apod(
     target_date: date | None = None,
-    settings: Settings = Depends(get_settings),
-    session: AsyncSession = Depends(get_session),
 ) -> SpaceObservationRead:
-    effective_date = target_date or date.today()
-    cached_observations = await list_observations_for_day(session, "nasa_apod", effective_date)
-    if cached_observations:
-        return SpaceObservationRead.model_validate(cached_observations[0])
-
-    async with NasaClient(settings.nasa_api_key) as client:
-        payload = await client.get_apod(effective_date)
-
-    observation = await save_observation(session, normalize_apod(payload))
+    observation = await run_apod_ingestion(target_date)
     return SpaceObservationRead.model_validate(observation)
 
 
 @router.post("/ingest/iss-position", response_model=SpaceObservationRead)
 async def ingest_iss_position(
-    session: AsyncSession = Depends(get_session),
 ) -> SpaceObservationRead:
-    async with OpenNotifyClient() as client:
-        payload = await client.get_iss_position()
-
-    observation = await save_observation(session, normalize_iss_position(payload))
+    observation = await run_iss_ingestion()
     return SpaceObservationRead.model_validate(observation)
 
 
@@ -92,23 +72,20 @@ async def ingest_iss_position(
 async def ingest_near_earth_objects(
     start_date: date,
     end_date: date | None = None,
-    settings: Settings = Depends(get_settings),
-    session: AsyncSession = Depends(get_session),
 ) -> list[SpaceObservationRead]:
     effective_end = _validate_neo_date_range(start_date, end_date)
-    if end_date is None or end_date == start_date:
-        cached_observations = await list_observations_for_day(session, "nasa_neows", start_date)
-        if cached_observations:
-            return [
-                SpaceObservationRead.model_validate(observation)
-                for observation in cached_observations
-            ]
-
-    async with NasaClient(settings.nasa_api_key) as client:
-        payload = await client.get_neo_feed(start_date, effective_end)
-
-    observations = await save_observations(session, normalize_neo_feed(payload))
+    observations = await run_neo_ingestion(start_date, effective_end)
     return [SpaceObservationRead.model_validate(observation) for observation in observations]
+
+
+@router.get("/ingestion-runs", response_model=list[IngestionRunRead])
+async def get_ingestion_runs(
+    status: str | None = Query(default=None, pattern="^(running|succeeded|failed)$"),
+    limit: int = Query(default=20, ge=1, le=100),
+    session: AsyncSession = Depends(get_session),
+) -> list[IngestionRunRead]:
+    runs = await list_ingestion_runs(session, limit=limit, status=status)
+    return [IngestionRunRead.model_validate(run) for run in runs]
 
 
 @router.get("/observations", response_model=list[SpaceObservationRead])

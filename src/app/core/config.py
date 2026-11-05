@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://space:space@localhost:5432/space_dashboard"
     nasa_api_key: str = "DEMO_KEY"
     log_level: str = "INFO"
+    scheduler_timezone: str = "UTC"
+    iss_ingestion_interval_minutes: int = 5
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
