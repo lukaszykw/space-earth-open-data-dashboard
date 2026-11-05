@@ -76,6 +76,12 @@ Agregowane podsumowanie dnia:
 http://localhost:8000/api/v1/space/daily-summary?target_date=2026-05-23
 ```
 
+Analityka obiektów NEO z trendami, parametrami przelotu i najbliższymi podejściami:
+
+```text
+http://localhost:8000/api/v1/space/analytics/neo?start_date=2026-05-01&end_date=2026-05-31
+```
+
 ## Sciezka demo
 
 1. Uruchom projekt:

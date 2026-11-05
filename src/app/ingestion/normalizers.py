@@ -47,12 +47,25 @@ def normalize_neo_feed(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
     for observed_date, objects in near_earth_objects.items():
         for item in objects:
+            diameter = item.get("estimated_diameter", {}).get("meters", {})
+            approaches = item.get("close_approach_data") or []
+            approach = approaches[0] if approaches else {}
             observations.append(
                 {
                     "source": "nasa_neows",
                     "external_id": item.get("id"),
                     "title": item.get("name"),
                     "description": item.get("nasa_jpl_url"),
+                    "is_hazardous": item.get("is_potentially_hazardous_asteroid"),
+                    "estimated_diameter_meters": _to_float(
+                        diameter.get("estimated_diameter_max")
+                    ),
+                    "relative_velocity_kps": _to_float(
+                        approach.get("relative_velocity", {}).get("kilometers_per_second")
+                    ),
+                    "miss_distance_km": _to_float(
+                        approach.get("miss_distance", {}).get("kilometers")
+                    ),
                     "observed_at": _date_to_utc_iso(observed_date),
                     "raw": item,
                 }

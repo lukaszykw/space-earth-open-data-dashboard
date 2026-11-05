@@ -43,6 +43,16 @@ def test_normalize_neo_feed_flattens_objects() -> None:
                         "id": "1",
                         "name": "Asteroid 1",
                         "nasa_jpl_url": "https://example.com/neo/1",
+                        "is_potentially_hazardous_asteroid": True,
+                        "estimated_diameter": {
+                            "meters": {"estimated_diameter_max": 142.5}
+                        },
+                        "close_approach_data": [
+                            {
+                                "relative_velocity": {"kilometers_per_second": "12.75"},
+                                "miss_distance": {"kilometers": "750000.5"},
+                            }
+                        ],
                     }
                 ]
             }
@@ -55,11 +65,23 @@ def test_normalize_neo_feed_flattens_objects() -> None:
             "external_id": "1",
             "title": "Asteroid 1",
             "description": "https://example.com/neo/1",
+            "is_hazardous": True,
+            "estimated_diameter_meters": 142.5,
+            "relative_velocity_kps": 12.75,
+            "miss_distance_km": 750000.5,
             "observed_at": "2026-05-21T00:00:00+00:00",
             "raw": {
                 "id": "1",
                 "name": "Asteroid 1",
                 "nasa_jpl_url": "https://example.com/neo/1",
+                "is_potentially_hazardous_asteroid": True,
+                "estimated_diameter": {"meters": {"estimated_diameter_max": 142.5}},
+                "close_approach_data": [
+                    {
+                        "relative_velocity": {"kilometers_per_second": "12.75"},
+                        "miss_distance": {"kilometers": "750000.5"},
+                    }
+                ],
             },
         }
     ]
