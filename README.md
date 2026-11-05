@@ -2,6 +2,9 @@
 
 Backend i dashboard do prezentowania danych z NASA APOD, NASA NeoWs oraz pozycji ISS.
 
+Dashboard pokazuje bieżącą pozycję i historię ISS na mapie oraz 30-dniowy trend obiektów
+bliskich Ziemi, w tym prędkość, średnicę, odległość minięcia i potencjalne zagrożenie.
+
 ## Konfiguracja
 
 Skopiuj `.env.example` do `.env` i ustaw klucz NASA:
