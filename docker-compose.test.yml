@@ -1,6 +1,8 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      target: test
     env_file: .env.example
     environment:
       APP_ENV: test

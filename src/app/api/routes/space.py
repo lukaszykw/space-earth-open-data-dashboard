@@ -10,6 +10,7 @@ from app.api.schemas import (
     SpaceObservationRead,
 )
 from app.core.config import Settings, get_settings
+from app.core.security import require_admin_token
 from app.db.session import get_session
 from app.ingestion.jobs import run_apod_ingestion, run_iss_ingestion, run_neo_ingestion
 from app.ingestion.nasa_client import NasaClient
@@ -59,7 +60,11 @@ async def get_near_earth_objects(
         return await client.get_neo_feed(start_date, effective_end)
 
 
-@router.post("/ingest/apod", response_model=SpaceObservationRead)
+@router.post(
+    "/ingest/apod",
+    response_model=SpaceObservationRead,
+    dependencies=[Depends(require_admin_token)],
+)
 async def ingest_apod(
     target_date: date | None = None,
 ) -> SpaceObservationRead:
@@ -67,14 +72,22 @@ async def ingest_apod(
     return SpaceObservationRead.model_validate(observation)
 
 
-@router.post("/ingest/iss-position", response_model=SpaceObservationRead)
+@router.post(
+    "/ingest/iss-position",
+    response_model=SpaceObservationRead,
+    dependencies=[Depends(require_admin_token)],
+)
 async def ingest_iss_position(
 ) -> SpaceObservationRead:
     observation = await run_iss_ingestion()
     return SpaceObservationRead.model_validate(observation)
 
 
-@router.post("/ingest/neo", response_model=list[SpaceObservationRead])
+@router.post(
+    "/ingest/neo",
+    response_model=list[SpaceObservationRead],
+    dependencies=[Depends(require_admin_token)],
+)
 async def ingest_near_earth_objects(
     start_date: date,
     end_date: date | None = None,
