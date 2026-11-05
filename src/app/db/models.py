@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Float, Integer, String, Text, func
+from sqlalchemy import DateTime, Float, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -12,6 +12,9 @@ class Base(DeclarativeBase):
 
 class SpaceObservation(Base):
     __tablename__ = "space_observations"
+    __table_args__ = (
+        UniqueConstraint("source", "external_id", name="uq_observation_source_external"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     source: Mapped[str] = mapped_column(String(80), index=True)

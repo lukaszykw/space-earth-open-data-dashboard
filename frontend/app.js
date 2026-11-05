@@ -234,9 +234,6 @@ async function postAction(url, successMessage) {
 }
 
 document.querySelector("#refresh-btn").addEventListener("click", loadDashboard);
-document.querySelector("#init-db-btn").addEventListener("click", () => {
-  postAction(`${api}/space/database/init`, "Baza zainicjalizowana.");
-});
 document.querySelector("#save-apod-btn").addEventListener("click", () => {
   postAction(`${api}/space/ingest/apod`, "APOD zapisany.");
 });
